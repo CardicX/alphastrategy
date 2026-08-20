@@ -1,12 +1,4 @@
-/* ============================================================
-   SUPABASE CONFIG
-   Fill these in from your Supabase project:
-   Project Settings → API → Project URL / anon public key
-   The anon key is safe to expose in client code — it's what
-   Row Level Security (in schema.sql) is designed to gate.
-   ============================================================ */
-
-const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL = "https://lknmotzvosifymlbzfms.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrbm1vdHp2b3NpZnltbGJ6Zm1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMTQ1MzYsImV4cCI6MjEwMjc5MDUzNn0.t5xycKI8pagsFt04GWLxAIJKU3N34CwOHHh0GCNnEI4";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
