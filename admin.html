@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Alpha Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+  .admin-wrap { max-width: 960px; margin: 0 auto; padding: 40px 24px 100px; }
+  .admin-section { margin-bottom: 44px; }
+  .admin-section h2 { font-family: var(--font-display); font-size: 20px; margin-bottom: 16px; }
+  .req-row { display: grid; grid-template-columns: 1.3fr 1.3fr 0.7fr 1fr auto; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .req-row .muted { color: var(--text-muted); font-size: 12px; }
+  .inline-form { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 10px; align-items: end; margin-top: 14px; }
+  .inline-form .field { margin-bottom: 0; }
+  .inline-form label { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); display:block; margin-bottom:5px; }
+  .inline-form input, .inline-form select { width: 100%; background: var(--bg); border: 1px solid var(--border-bright); color: var(--text); padding: 9px 10px; border-radius: 3px; font-size: 13px; }
+  .small-btn { padding: 9px 14px; font-size: 12.5px; }
+  .status-tag { font-family: var(--font-mono); font-size: 11px; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--border-bright); }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--accent); padding: 14px 20px; border-radius: 6px; font-size: 13.5px; display: none; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="brand"><span class="brand-mark">₿</span> Alpha Strategy · Admin</a>
+    <div class="nav-links"><a href="#" id="logoutLink" style="display:none;">Log out</a></div>
+  </div>
+</nav>
+
+<!-- LOGIN -->
+<div id="loginView" class="form-page">
+  <div class="form-card">
+    <span class="eyebrow">Admin access</span>
+    <h1>Log in</h1>
+    <p>Use the admin account created in Supabase Auth.</p>
+    <div class="field"><label>Email</label><input type="email" id="loginEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="loginPass"></div>
+    <button class="btn btn-primary btn-block" onclick="login()">Log in →</button>
+    <p id="loginError" style="color:var(--negative); font-size:13px; margin-top:12px; display:none;"></p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="panelView" class="admin-wrap" style="display:none;">
+
+  <div class="admin-section">
+    <h2>Pending join requests</h2>
+    <div id="requestsList"><p class="muted">Loading…</p></div>
+  </div>
+
+  <div class="admin-section">
+    <h2>Add a monthly contribution</h2>
+    <div class="inline-form">
+      <div class="field"><label>Participant ID</label><input id="cId" placeholder="AS-1001"></div>
+      <div class="field"><label>Date</label><input id="cDate" type="date"></div>
+      <div class="field"><label>Amount ($)</label><input id="cAmount" type="number" step="1"></div>
+      <div class="field"><label>Note</label><input id="cNote" value="Monthly DCA"></div>
+      <button class="btn btn-primary small-btn" onclick="addContribution()">Add →</button>
+    </div>
+  </div>
+
+  <div class="admin-section">
+    <h2>Update quarterly stats</h2>
+    <p class="muted" style="margin-bottom:6px;">Pull these from your Bybit-held reserve — this writes the numbers the participant's dashboard shows.</p>
+    <div class="inline-form" style="grid-template-columns: repeat(4,1fr);">
+      <div class="field"><label>Participant ID</label><input id="sId" placeholder="AS-1001"></div>
+      <div class="field"><label>Quarter</label><input id="sQuarter" placeholder="Q3 2026"></div>
+      <div class="field"><label>BTC held</label><input id="sBtc" type="number" step="0.00001"></div>
+      <div class="field"><label>Avg BTC cost ($)</label><input id="sBtcCost" type="number" step="1"></div>
+    </div>
+    <div class="inline-form" style="grid-template-columns: repeat(4,1fr); margin-top:10px;">
+      <div class="field"><label>Altcoins ($)</label><input id="sAlt" type="number" step="1"></div>
+      <div class="field"><label>Leverage exposure ($)</label><input id="sLev" type="number" step="1"></div>
+      <div class="field"><label>Realized PnL ($)</label><input id="sReal" type="number" step="1"></div>
+      <div class="field"><label>Unrealized PnL ($)</label><input id="sUnreal" type="number" step="1"></div>
+    </div>
+    <div class="inline-form" style="grid-template-columns: 1fr 1fr auto; margin-top:10px;">
+      <div class="field"><label>Net portfolio value ($)</label><input id="sNet" type="number" step="1"></div>
+      <div class="field"><label>Borrowing exposure ($)</label><input id="sBorrow" type="number" step="1"></div>
+      <button class="btn btn-primary small-btn" onclick="addStats()">Save snapshot →</button>
+    </div>
+  </div>
+
+  <div class="admin-section">
+    <h2>Reserve-wide summary</h2>
+    <div class="inline-form" style="grid-template-columns: repeat(4,1fr) auto;">
+      <div class="field"><label>Total participants</label><input id="rTotalP" type="number"></div>
+      <div class="field"><label>Total BTC</label><input id="rTotalBtc" type="number" step="0.0001"></div>
+      <div class="field"><label>Total value ($)</label><input id="rTotalVal" type="number" step="1"></div>
+      <div class="field"><label>Phase</label>
+        <select id="rPhase">
+          <option>Accumulation</option><option>Expansion</option><option>Euphoria</option>
+          <option>Distribution</option><option>Reaccumulation</option>
+        </select>
+      </div>
+      <button class="btn btn-primary small-btn" onclick="updateSummary()">Save →</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(()=> t.style.display = 'none', 2500);
+  }
+
+  async function checkSession(){
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('panelView').style.display = 'block';
+      document.getElementById('logoutLink').style.display = 'inline';
+      loadRequests();
+    }
+  }
+
+  async function login(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPass').value;
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    const err = document.getElementById('loginError');
+    if (error) { err.textContent = error.message; err.style.display = 'block'; return; }
+    checkSession();
+  }
+
+  document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await supabaseClient.auth.signOut();
+    location.reload();
+  });
+
+  async function loadRequests(){
+    const el = document.getElementById('requestsList');
+    const { data, error } = await supabaseClient
+      .from('signup_requests').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+    if (error) { el.innerHTML = `<p class="muted">${error.message}</p>`; return; }
+    if (!data || !data.length) { el.innerHTML = '<p class="muted">No pending requests.</p>'; return; }
+    el.innerHTML = data.map(r => `
+      <div class="req-row">
+        <div><strong>${r.name}</strong><div class="muted">${r.email}</div></div>
+        <div class="muted">${r.wallet || '—'}</div>
+        <div>$${r.monthly_amount}/mo</div>
+        <div class="status-tag">${r.risk_ack ? 'Risk ack ✓' : 'No ack'}</div>
+        <button class="btn btn-primary small-btn" onclick="approve(${r.id}, '${r.name.replace(/'/g,"\\'")}', '${r.email}', ${r.monthly_amount})">Approve →</button>
+      </div>
+    `).join('');
+  }
+
+  async function approve(reqId, name, email, monthlyAmount){
+    // generate next participant id
+    const { data: existing } = await supabaseClient.from('participants').select('id');
+    const nums = (existing || []).map(p => parseInt((p.id||'').split('-')[1]) || 0);
+    const nextNum = (nums.length ? Math.max(...nums) : 1000) + 1;
+    const id = 'AS-' + nextNum;
+
+    const { error: insertErr } = await supabaseClient.from('participants').insert({
+      id, name, email, monthly_amount: monthlyAmount, status: 'Active'
+    });
+    if (insertErr) { showToast('Error: ' + insertErr.message); return; }
+
+    await supabaseClient.from('signup_requests').update({ status: 'approved' }).eq('id', reqId);
+    showToast(`Approved — ${id} created for ${name}`);
+    loadRequests();
+  }
+
+  async function addContribution(){
+    const participant_id = document.getElementById('cId').value.trim().toUpperCase();
+    const date = document.getElementById('cDate').value || new Date().toISOString().slice(0,10);
+    const amount = Number(document.getElementById('cAmount').value);
+    const note = document.getElementById('cNote').value || 'Monthly DCA';
+    const { error } = await supabaseClient.from('contributions').insert({ participant_id, date, amount, note });
+    showToast(error ? 'Error: ' + error.message : `Added $${amount} for ${participant_id}`);
+  }
+
+  async function addStats(){
+    const row = {
+      participant_id: document.getElementById('sId').value.trim().toUpperCase(),
+      quarter: document.getElementById('sQuarter').value.trim(),
+      btc: Number(document.getElementById('sBtc').value) || 0,
+      btc_avg_cost: Number(document.getElementById('sBtcCost').value) || 0,
+      altcoins_usd: Number(document.getElementById('sAlt').value) || 0,
+      leverage_usd: Number(document.getElementById('sLev').value) || 0,
+      realized_pnl: Number(document.getElementById('sReal').value) || 0,
+      unrealized_pnl: Number(document.getElementById('sUnreal').value) || 0,
+      net_value: Number(document.getElementById('sNet').value) || 0,
+      borrowing_exposure: Number(document.getElementById('sBorrow').value) || 0
+    };
+    const { error } = await supabaseClient.from('participant_stats').insert(row);
+    showToast(error ? 'Error: ' + error.message : `Snapshot saved for ${row.participant_id}`);
+  }
+
+  async function updateSummary(){
+    const row = {
+      id: 1,
+      total_participants: Number(document.getElementById('rTotalP').value) || 0,
+      total_btc: Number(document.getElementById('rTotalBtc').value) || 0,
+      total_value_usd: Number(document.getElementById('rTotalVal').value) || 0,
+      phase: document.getElementById('rPhase').value,
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await supabaseClient.from('reserve_summary').upsert(row);
+    showToast(error ? 'Error: ' + error.message : 'Reserve summary updated');
+  }
+
+  checkSession();
+</script>
+
+</body>
+</html>

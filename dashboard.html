@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Alpha Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+</head>
+<body>
+
+<div class="dash-shell">
+  <div class="dash-top">
+    <div class="container">
+      <a href="index.html" class="brand"><span class="brand-mark">₿</span> Alpha Strategy</a>
+    </div>
+  </div>
+
+  <!-- LOOKUP STATE -->
+  <div id="lookupView" class="container lookup-box">
+    <span class="eyebrow">Participant dashboard</span>
+    <h1 style="font-family:var(--font-display); font-size:30px; margin:14px 0 10px;">Enter your participant ID</h1>
+    <p style="color:var(--text-muted); margin-bottom:26px;">Format: AS-XXXX — sent to you when you joined.</p>
+    <div style="max-width:340px; margin:0 auto; display:flex; gap:10px;">
+      <input type="text" id="idInput" placeholder="AS-1001" class="mono"
+        style="flex:1; background:var(--surface); border:1px solid var(--border-bright); color:var(--text); padding:13px 14px; border-radius:3px; font-size:15px;">
+      <button class="btn btn-primary" onclick="lookup()">View →</button>
+    </div>
+    <p id="lookupError" style="color:var(--negative); margin-top:14px; font-size:13px; display:none;">No participant found with that ID. Check with the community admin.</p>
+    <p id="lookupLoading" style="margin-top:14px; font-size:13px; color:var(--text-muted); display:none;">Looking up…</p>
+  </div>
+
+  <!-- DASHBOARD STATE -->
+  <div id="dashView" class="dash-body" style="display:none;">
+    <div class="container">
+
+      <div class="dash-head">
+        <div>
+          <h1 id="dName">—</h1>
+          <div class="sub">Participant <span id="dId" class="mono"></span> · joined <span id="dJoined"></span></div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span class="badge" id="dPhase">Accumulation phase</span>
+          <a href="#" onclick="reset(); return false;" class="btn btn-ghost" style="padding:10px 16px; font-size:12.5px;">Switch ID</a>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="lbl">Net portfolio value</div>
+          <div class="val" id="kNet">$0.00</div>
+          <div class="delta up" id="kNetDelta"></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">BTC accumulated</div>
+          <div class="val" id="kBtc">0.00000</div>
+          <div class="delta" id="kBtcCost"></div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Unrealized PnL</div>
+          <div class="val" id="kUnreal">$0.00</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Realized PnL</div>
+          <div class="val" id="kReal">$0.00</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Contribution history</h2>
+              <span class="muted" id="dQuarter"></span>
+            </div>
+            <table>
+              <thead><tr><th>Date</th><th>Note</th><th class="mono" style="text-align:right;">Amount</th></tr></thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Reserve overview</h2><span class="muted">Community-wide</span></div>
+            <table>
+              <tr><td>Total participants</td><td class="mono" style="text-align:right;" id="rParticipants"></td></tr>
+              <tr><td>Total BTC in reserve</td><td class="mono" style="text-align:right;" id="rBtc"></td></tr>
+              <tr><td>Total reserve value</td><td class="mono" style="text-align:right;" id="rValue"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <div class="panel-head"><h2>Allocation</h2></div>
+            <div id="allocBars"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Exposure</h2></div>
+            <table>
+              <tr><td>Avg. BTC acquisition price</td><td class="mono" style="text-align:right;" id="pAvg"></td></tr>
+              <tr><td>Borrowing exposure</td><td class="mono" style="text-align:right;" id="pBorrow"></td></tr>
+              <tr><td>Total contributed</td><td class="mono" style="text-align:right;" id="pTotal"></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:12px; color:var(--text-dim); margin-top:10px;">
+        Figures update quarterly per the Alpha Strategy reporting cadence. This prototype uses demo data — connect it to your admin/Bybit-backed data source for live figures.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const fmt = (n) => '$' + Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fmtBtc = (n) => Number(n).toFixed(5) + ' BTC';
+
+  async function lookup(){
+    const id = document.getElementById('idInput').value.trim().toUpperCase();
+    const errEl = document.getElementById('lookupError');
+    const loadEl = document.getElementById('lookupLoading');
+    errEl.style.display = 'none';
+    if (!id) return;
+    loadEl.style.display = 'block';
+
+    // participant record
+    const { data: participant, error: pErr } = await supabaseClient
+      .from('participants').select('*').eq('id', id).maybeSingle();
+
+    if (pErr || !participant) {
+      loadEl.style.display = 'none';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // contribution history (most recent first)
+    const { data: history } = await supabaseClient
+      .from('contributions').select('*').eq('participant_id', id)
+      .order('date', { ascending: false });
+
+    // latest stats snapshot
+    const { data: statsRows } = await supabaseClient
+      .from('participant_stats').select('*').eq('participant_id', id)
+      .order('updated_at', { ascending: false }).limit(1);
+    const stats = (statsRows && statsRows[0]) || {
+      quarter: '—', btc: 0, btc_avg_cost: 0, altcoins_usd: 0, leverage_usd: 0,
+      realized_pnl: 0, unrealized_pnl: 0, net_value: 0, borrowing_exposure: 0
+    };
+
+    // reserve-wide summary
+    const { data: summaryRows } = await supabaseClient
+      .from('reserve_summary').select('*').eq('id', 1).limit(1);
+    const summary = (summaryRows && summaryRows[0]) || {
+      total_participants: 0, total_btc: 0, total_value_usd: 0, phase: 'Accumulation'
+    };
+
+    const totalContributed = (history || []).reduce((s, h) => s + Number(h.amount), 0);
+
+    loadEl.style.display = 'none';
+    render(id, {
+      name: participant.name,
+      joined: participant.joined_date,
+      contributions: { total: totalContributed, history: history || [] },
+      holdings: { btc: stats.btc, btcAvgCost: stats.btc_avg_cost, altcoins: stats.altcoins_usd, leverageExposure: stats.leverage_usd },
+      pnl: { realized: stats.realized_pnl, unrealized: stats.unrealized_pnl },
+      netValue: stats.net_value,
+      borrowingExposure: stats.borrowing_exposure,
+      quarter: stats.quarter
+    }, summary);
+
+    document.getElementById('lookupView').style.display = 'none';
+    document.getElementById('dashView').style.display = 'block';
+  }
+
+  function reset(){
+    document.getElementById('dashView').style.display = 'none';
+    document.getElementById('lookupView').style.display = 'block';
+    document.getElementById('idInput').value = '';
+  }
+
+  document.getElementById('idInput').addEventListener('keydown', e => { if(e.key === 'Enter') lookup(); });
+
+  function render(id, p, summary){
+    document.getElementById('dName').textContent = p.name;
+    document.getElementById('dId').textContent = id;
+    document.getElementById('dJoined').textContent = p.joined;
+    document.getElementById('dPhase').textContent = summary.phase + ' phase';
+    document.getElementById('dQuarter').textContent = p.quarter;
+
+    document.getElementById('kNet').textContent = fmt(p.netValue);
+    const gain = p.netValue - p.contributions.total;
+    const netDelta = document.getElementById('kNetDelta');
+    netDelta.textContent = (gain>=0?'+':'') + fmt(gain) + ' vs contributed';
+    netDelta.className = 'delta ' + (gain>=0?'up':'down');
+
+    document.getElementById('kBtc').textContent = fmtBtc(p.holdings.btc);
+    document.getElementById('kBtcCost').textContent = 'avg cost ' + fmt(p.holdings.btcAvgCost);
+
+    document.getElementById('kUnreal').textContent = (p.pnl.unrealized>=0?'+':'') + fmt(p.pnl.unrealized);
+    document.getElementById('kUnreal').style.color = p.pnl.unrealized>=0 ? 'var(--positive)' : 'var(--negative)';
+    document.getElementById('kReal').textContent = (p.pnl.realized>=0?'+':'') + fmt(p.pnl.realized);
+    document.getElementById('kReal').style.color = p.pnl.realized>=0 ? 'var(--positive)' : 'var(--negative)';
+
+    const hb = document.getElementById('historyBody');
+    hb.innerHTML = p.contributions.history.map(h => `
+      <tr><td>${h.date}</td><td>${h.note}</td><td class="mono" style="text-align:right;">${fmt(h.amount)}</td></tr>
+    `).join('');
+
+    document.getElementById('rParticipants').textContent = summary.total_participants;
+    document.getElementById('rBtc').textContent = fmtBtc(summary.total_btc);
+    document.getElementById('rValue').textContent = fmt(summary.total_value_usd);
+
+    const btcUsd = p.holdings.btc * p.holdings.btcAvgCost;
+    const total = btcUsd + p.holdings.altcoins + p.holdings.leverageExposure;
+    const rows = [
+      ['BTC spot', btcUsd],
+      ['Altcoins', p.holdings.altcoins],
+      ['Leveraged BTC', p.holdings.leverageExposure]
+    ];
+    document.getElementById('allocBars').innerHTML = rows.map(([name, val]) => {
+      const pct = total ? Math.round((val/total)*100) : 0;
+      return `<div class="bar-row">
+        <div class="name">${name}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="pct">${pct}%</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('pAvg').textContent = fmt(p.holdings.btcAvgCost);
+    document.getElementById('pBorrow').textContent = fmt(p.borrowingExposure);
+    document.getElementById('pTotal').textContent = fmt(p.contributions.total);
+  }
+</script>
+
+</body>
+</html>

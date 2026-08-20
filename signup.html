@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join — Alpha Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="brand"><span class="brand-mark">₿</span> Alpha Strategy</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Track my reserve</a>
+    </div>
+  </div>
+</nav>
+
+<div class="form-page">
+  <div class="form-card">
+    <span class="eyebrow">Participant sign-up</span>
+    <h1>Join the reserve</h1>
+    <p>You'll get a participant ID to track your own accumulation, PnL, and quarterly reports.</p>
+
+    <form id="signupForm">
+      <div class="field">
+        <label for="name">Full name</label>
+        <input type="text" id="name" required placeholder="Jane Doe">
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" required placeholder="you@email.com">
+      </div>
+      <div class="field">
+        <label for="amount">Monthly contribution (min $50)</label>
+        <input type="number" id="amount" min="50" step="10" required placeholder="50">
+      </div>
+      <div class="field">
+        <label for="wallet">On-chain / exchange account (optional)</label>
+        <input type="text" id="wallet" placeholder="For joint-trade reconciliation">
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="riskAck" required>
+        <label for="riskAck">I understand my capital is at risk, returns are not guaranteed, leverage can increase losses, and additional contributions are never required to cover losses.</label>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Request to join →</button>
+      <p id="formError" style="color:var(--negative); font-size:13px; margin-top:12px; display:none;"></p>
+    </form>
+
+    <div class="id-result" id="idResult">
+      <div class="label">Request received</div>
+      <p style="font-size:13.5px; color:var(--text-muted); margin-top:6px;">An admin will review your request and assign your participant ID. You'll be notified by email.</p>
+    </div>
+
+    <p class="form-foot">Already joined? <a href="dashboard.html" style="color:var(--accent);">Look up your dashboard</a></p>
+  </div>
+</div>
+
+<script>
+  document.getElementById('signupForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const err = document.getElementById('formError');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      monthly_amount: Number(document.getElementById('amount').value),
+      wallet: document.getElementById('wallet').value.trim() || null,
+      risk_ack: document.getElementById('riskAck').checked
+    };
+
+    const { error } = await supabaseClient.from('signup_requests').insert(payload);
+
+    if (error) {
+      err.textContent = 'Something went wrong: ' + error.message;
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Request to join →';
+      return;
+    }
+
+    document.getElementById('idResult').style.display = 'block';
+    this.style.display = 'none';
+  });
+</script>
+
+</body>
+</html>
