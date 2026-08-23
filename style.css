@@ -459,3 +459,18 @@ td.neg { color: var(--negative); }
   .risk ul { grid-template-columns: 1fr; }
   .nav-links { display: none; }
 }
+
+/* fix: native <button> elements default to a white background */
+button.btn { background-color: transparent; }
+button.btn-primary { background-color: var(--accent); }
+
+/* fix: force off native OS button chrome so background-color actually applies */
+button.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: transparent;
+}
+button.btn-primary {
+  background-color: var(--accent);
+}
