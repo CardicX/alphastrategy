@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<script src="wallet-config.js"></script>
 </head>
 <body>
 
@@ -44,6 +45,7 @@
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
           <span class="badge" id="dPhase">Accumulation phase</span>
+          <button onclick="openDeposit()" class="btn btn-primary" style="padding:10px 16px; font-size:12.5px;">Deposit →</button>
           <a href="#" onclick="reset(); return false;" class="btn btn-ghost" style="padding:10px 16px; font-size:12.5px;">Switch ID</a>
         </div>
       </div>
@@ -114,7 +116,35 @@
       </p>
     </div>
   </div>
+
+  <!-- DEPOSIT MODAL -->
+  <div id="depositModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:100; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; max-width:420px; width:100%; padding:32px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <span class="eyebrow">Deposit funds</span>
+        <a href="#" onclick="closeDeposit(); return false;" style="color:var(--text-muted); font-size:20px; line-height:1;">&times;</a>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:22px;" id="depositTabs">
+        <button class="btn btn-ghost dep-tab" data-cur="BTC" onclick="selectCurrency('BTC')" style="flex:1; padding:9px; font-size:13px; justify-content:center;">BTC</button>
+        <button class="btn btn-ghost dep-tab" data-cur="USDT" onclick="selectCurrency('USDT')" style="flex:1; padding:9px; font-size:13px; justify-content:center;">USDT</button>
+        <button class="btn btn-ghost dep-tab" data-cur="ETH" onclick="selectCurrency('ETH')" style="flex:1; padding:9px; font-size:13px; justify-content:center;">ETH</button>
+      </div>
+
+      <div style="text-align:center;">
+        <img id="depositQr" src="" alt="Deposit QR code" style="width:180px; height:180px; border-radius:6px; background:#fff; padding:10px; margin-bottom:18px;">
+        <div class="eyebrow" style="color:var(--negative);" id="depositNetwork">Network</div>
+        <div class="mono" id="depositAddress" style="font-size:13px; word-break:break-all; background:var(--bg); border:1px solid var(--border-bright); border-radius:4px; padding:12px; margin:10px 0 14px;"></div>
+        <button class="btn btn-primary btn-block" onclick="copyAddress()">Copy address</button>
+        <p style="font-size:12px; color:var(--text-dim); margin-top:14px;">
+          Only send on the network shown above. Wrong-network transfers can't be recovered.
+          After sending, let your admin know so your contribution can be logged against your participant ID.
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
+
 
 <script>
   const fmt = (n) => '$' + Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -234,6 +264,37 @@
     document.getElementById('pAvg').textContent = fmt(p.holdings.btcAvgCost);
     document.getElementById('pBorrow').textContent = fmt(p.borrowingExposure);
     document.getElementById('pTotal').textContent = fmt(p.contributions.total);
+  }
+
+  // ---- deposit modal ----
+  function openDeposit(){
+    document.getElementById('depositModal').style.display = 'flex';
+    selectCurrency('BTC');
+  }
+  function closeDeposit(){
+    document.getElementById('depositModal').style.display = 'none';
+  }
+  function selectCurrency(cur){
+    document.querySelectorAll('.dep-tab').forEach(b => {
+      const active = b.dataset.cur === cur;
+      b.style.borderColor = active ? 'var(--accent)' : 'var(--border-bright)';
+      b.style.color = active ? 'var(--accent)' : 'var(--text)';
+    });
+    const w = WALLET_ADDRESSES[cur];
+    document.getElementById('depositNetwork').textContent = w.network;
+    document.getElementById('depositAddress').textContent = w.address;
+    document.getElementById('depositQr').src =
+      'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(w.address);
+  }
+  function copyAddress(){
+    const addr = document.getElementById('depositAddress').textContent;
+    navigator.clipboard.writeText(addr).then(() => showCopied());
+  }
+  function showCopied(){
+    const btn = document.querySelector('#depositModal .btn-primary');
+    const original = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = original, 1500);
   }
 </script>
 
