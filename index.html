@@ -5,29 +5,178 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alpha Strategy — Bitcoin Reserve</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0a0a0b; --panel:#141416; --panel-raised:#1b1b1d; --line:#26262a;
+    --btc:#f7931a; --btc-dim:#5c3d13; --text:#f2f0eb; --muted:#8f8b84;
+    --positive:#3ecf8e; --negative:#e5484d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{ scroll-behavior:smooth; }
+  body{
+    background:var(--void); color:var(--text); font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  a{ color:inherit; text-decoration:none; }
+  .eyebrow{ font-size:10.5px; letter-spacing:2px; text-transform:uppercase; color:var(--btc); font-weight:600; }
+  .container{ max-width:1180px; margin:0 auto; padding:0 40px; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; padding:20px 40px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,10,11,0.9);
+    backdrop-filter:blur(10px); z-index:20;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%; border:1.5px solid var(--btc); color:var(--btc);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:15px;
+  }
+  .brand-name{ font-family:'Space Grotesk'; font-weight:600; font-size:16px; }
+  .brand-sub{ font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  nav{ display:flex; align-items:center; gap:32px; }
+  nav a.link{ font-size:13.5px; color:var(--muted); transition:color .15s ease; }
+  nav a.link:hover{ color:var(--text); }
+  .btn{
+    font-family:'Inter'; font-weight:600; font-size:13px; padding:10px 20px; border-radius:8px;
+    cursor:pointer; border:none; transition:.15s ease; appearance:none; -webkit-appearance:none; display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary{ background:var(--btc); color:#181104; }
+  .btn-primary:hover{ background:#ffa733; box-shadow:0 0 24px rgba(247,147,26,0.35); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--text); }
+  .btn-ghost:hover{ border-color:#444; }
+
+  .hero{ padding:88px 0 60px; position:relative; overflow:hidden; }
+  .hero::before{
+    content:''; position:absolute; top:-200px; left:50%; transform:translateX(-50%);
+    width:900px; height:500px; background:radial-gradient(ellipse at center, rgba(247,147,26,0.14), transparent 65%);
+    pointer-events:none;
+  }
+  .hero-grid{ display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center; position:relative; }
+  .hero h1{ font-family:'Space Grotesk'; font-size:clamp(38px,4.6vw,56px); line-height:1.06; letter-spacing:-0.02em; margin:16px 0 20px; }
+  .hero h1 .accent{ color:var(--btc); }
+  .hero p.lede{ color:var(--muted); font-size:16px; line-height:1.6; max-width:480px; margin-bottom:30px; }
+  .hero-actions{ display:flex; gap:12px; margin-bottom:36px; }
+  .hero-stats{ display:flex; gap:32px; padding-top:24px; border-top:1px solid var(--line); }
+  .hero-stat-num{ font-family:'IBM Plex Mono'; font-size:20px; color:var(--text); }
+  .hero-stat-label{ font-size:11.5px; color:var(--muted); margin-top:4px; }
+
+  .price-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.4);
+  }
+  .price-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+  .price-coin{ display:flex; align-items:center; gap:8px; font-family:'Space Grotesk'; font-weight:600; font-size:14px; }
+  .price-coin .dot{ width:20px; height:20px; border-radius:50%; background:var(--btc); color:#181104; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+  .live-tag{ display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--positive); font-family:'IBM Plex Mono'; }
+  .live-tag .pulse{ width:6px; height:6px; border-radius:50%; background:var(--positive); box-shadow:0 0 8px var(--positive); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  .price-value{ font-family:'IBM Plex Mono'; font-size:34px; font-weight:500; margin:6px 0 2px; }
+  .price-delta{ font-size:13px; color:var(--positive); font-family:'IBM Plex Mono'; margin-bottom:18px; }
+
+  .chart-wrap{ height:170px; margin-bottom:14px; }
+  .chart-wrap svg{ width:100%; height:100%; display:block; }
+
+  .price-foot{ display:flex; justify-content:space-between; padding-top:16px; border-top:1px dashed var(--line); font-size:12px; }
+  .price-foot .k{ color:var(--muted); }
+  .price-foot .v{ font-family:'IBM Plex Mono'; margin-top:4px; }
+
+  section{ padding:76px 0; border-top:1px solid var(--line); }
+  .section-head{ max-width:600px; margin-bottom:44px; }
+  .section-head h2{ font-family:'Space Grotesk'; font-size:clamp(26px,3vw,34px); margin-top:10px; letter-spacing:-0.01em; }
+  .section-head p{ color:var(--muted); margin-top:12px; font-size:14.5px; line-height:1.6; }
+
+  .alloc-grid{ display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:16px; }
+  .alloc-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px;
+    transition:.2s ease;
+  }
+  .alloc-card:hover{ border-color:#3a3a3e; transform:translateY(-2px); }
+  .alloc-card.core{ background:linear-gradient(160deg, rgba(247,147,26,0.10), var(--panel) 60%); border-color:var(--btc-dim); }
+  .alloc-pct{ font-family:'IBM Plex Mono'; font-size:15px; color:var(--btc); }
+  .alloc-card.core .alloc-pct{ font-size:30px; }
+  .alloc-card h3{ font-family:'Space Grotesk'; font-size:15.5px; margin:12px 0 8px; }
+  .alloc-card p{ font-size:13px; color:var(--muted); line-height:1.55; }
+
+  .leverage-row{ margin-top:16px; }
+  .leverage-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px 26px;
+    display:flex; justify-content:space-between; align-items:center; gap:20px;
+  }
+  .leverage-card .alloc-pct{ font-size:20px; flex-shrink:0; }
+  .leverage-card p{ font-size:13px; color:var(--muted); line-height:1.55; }
+
+  .cycle-wrap{ display:grid; grid-template-columns:300px 1fr; gap:56px; align-items:center; }
+  .cycle-list{ display:flex; flex-direction:column; gap:2px; }
+  .cycle-item{ padding:14px 16px; border-radius:10px; border:1px solid transparent; cursor:default; transition:background .15s ease; }
+  .cycle-item:hover, .cycle-item.active{ background:var(--panel); border-color:var(--line); }
+  .cycle-item .tag{ font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--muted); }
+  .cycle-item.active .tag{ color:var(--btc); }
+  .cycle-item h4{ font-family:'Space Grotesk'; font-size:15px; margin:4px 0 3px; }
+  .cycle-item p{ font-size:12.5px; color:var(--muted); }
+
+  .feat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .feat-card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px; }
+  .feat-card .num{ font-family:'IBM Plex Mono'; color:var(--btc); font-size:13px; }
+  .feat-card h3{ font-family:'Space Grotesk'; font-size:16px; margin:12px 0 8px; }
+  .feat-card p{ font-size:13px; color:var(--muted); line-height:1.6; }
+
+  .risk-card{
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--negative);
+    border-radius:12px; padding:28px 30px;
+  }
+  .risk-card h3{ font-family:'Space Grotesk'; font-size:16px; margin-bottom:14px; color:var(--negative); }
+  .risk-card ul{ padding-left:18px; color:var(--muted); font-size:13.5px; display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; }
+  .risk-card li{ line-height:1.5; }
+
+  .cta{
+    background:linear-gradient(135deg, rgba(247,147,26,0.12), var(--panel));
+    border:1px solid var(--btc-dim); border-radius:20px; padding:56px; text-align:center;
+  }
+  .cta h2{ font-family:'Space Grotesk'; font-size:clamp(24px,3vw,32px); margin-bottom:14px; }
+  .cta p{ color:var(--muted); font-size:14.5px; margin-bottom:26px; max-width:440px; margin-left:auto; margin-right:auto; }
+
+  footer{ display:flex; justify-content:space-between; align-items:center; padding:36px 0; font-size:12.5px; color:var(--muted); border-top:1px solid var(--line); }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  @media (max-width: 900px){
+    .hero-grid, .cycle-wrap{ grid-template-columns:1fr; }
+    .alloc-grid, .feat-grid{ grid-template-columns:1fr; }
+    .risk-card ul{ grid-template-columns:1fr; }
+    nav{ display:none; }
+    header{ padding:18px 24px; }
+    .container{ padding:0 24px; }
+  }
+</style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <div class="brand"><span class="brand-mark">₿</span> Alpha Strategy</div>
-    <div class="nav-links">
-      <a href="#strategy">Strategy</a>
-      <a href="#cycle">Market Cycle</a>
-      <a href="#risk">Risk</a>
-      <a href="dashboard.html">Track my reserve</a>
-      <a href="signup.html" class="nav-cta">Join</a>
+<header>
+  <a href="index.html" class="brand">
+    <div class="brand-mark">₿</div>
+    <div>
+      <div class="brand-name">Alpha Strategy</div>
+      <div class="brand-sub">Home of Alphas</div>
     </div>
-  </div>
-</nav>
+  </a>
+  <nav>
+    <a href="#strategy" class="link">Strategy</a>
+    <a href="#cycle" class="link">Market Cycle</a>
+    <a href="#risk" class="link">Risk</a>
+    <a href="dashboard.html" class="link">Track my reserve</a>
+    <a href="requests.html" class="link">Support</a>
+    <a href="signup.html" class="btn btn-primary">Join →</a>
+  </nav>
+</header>
 
-<header class="hero">
+<section class="hero" style="border-top:none;">
   <div class="container hero-grid">
     <div>
       <span class="eyebrow">Home of Alphas</span>
-      <h1>Accumulate.<br>Protect. <em>Recycle.</em><br>Repeat.</h1>
+      <h1>Accumulate.<br>Protect. <span class="accent">Recycle.</span><br>Repeat.</h1>
       <p class="lede">A disciplined Bitcoin treasury strategy for the community — monthly DCA, controlled leverage, and strategic selling through the full market cycle. No perfect entries required.</p>
       <div class="hero-actions">
         <a href="signup.html" class="btn btn-primary">Join the reserve →</a>
@@ -35,7 +184,7 @@
       </div>
       <div class="hero-stats">
         <div>
-          <div class="hero-stat-num">$50<span style="color:var(--text-muted); font-size:14px;">/mo</span></div>
+          <div class="hero-stat-num">$50<span style="color:var(--muted); font-size:13px;">/mo</span></div>
           <div class="hero-stat-label">Minimum contribution</div>
         </div>
         <div>
@@ -49,57 +198,69 @@
       </div>
     </div>
 
-    <div class="stack-visual">
-      <div class="stack-head">
-        <span><span class="dot"></span>Reserve — accumulating</span>
-        <span>DCA cycle 001</span>
+    <div class="price-card">
+      <div class="price-top">
+        <div class="price-coin"><span class="dot">₿</span>Bitcoin · BTC</div>
+        <div class="live-tag"><span class="pulse"></span><span id="liveLabel">LIVE</span></div>
       </div>
-      <div class="sat-blocks" id="satBlocks"></div>
-      <div class="stack-foot">
-        <span>Every contribution → BTC spot first</span>
-        <span class="up">stacking ↑</span>
-      </div>
-    </div>
-  </div>
-</header>
+      <div class="price-value mono" id="priceValue">—</div>
+      <div class="price-delta" id="priceDelta">Loading…</div>
 
-<section id="strategy">
-  <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">01 — How contributions are routed</span>
-      <h2>Bitcoin first. Everything else is optional, and small.</h2>
-      <p>Each contribution goes to BTC spot first. Only after that acquisition may the strategy draw up to 20% financing against eligible BTC collateral — and even then, it's split into three narrow, purpose-built buckets.</p>
-    </div>
-    <div class="alloc">
-      <div class="alloc-cell core">
-        <div class="pct">100%</div>
-        <h3>Core BTC accumulation</h3>
-        <p>Every contribution is directed to spot Bitcoin first. This is the foundation of the reserve — not a rotation, not a bet.</p>
+      <div class="chart-wrap">
+        <svg viewBox="0 0 400 170" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f7931a" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#f7931a" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polyline id="chartLine" fill="none" stroke="#f7931a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points=""/>
+          <polygon id="chartFill" fill="url(#areaFill)" points=""/>
+        </svg>
       </div>
-      <div class="alloc-cell">
-        <div class="pct">↳ 5%</div>
-        <h3>Participant liquidity</h3>
-        <p>A small portion of financing made available for participant expenses, per plan rules.</p>
-      </div>
-      <div class="alloc-cell">
-        <div class="pct">↳ 10%</div>
-        <h3>Strategic altcoins</h3>
-        <p>Secondary positions in assets that meet predefined criteria. BTC stays primary.</p>
-      </div>
-    </div>
-    <div style="margin-top:1px;">
-      <div class="alloc" style="grid-template-columns: 1fr;">
-        <div class="alloc-cell">
-          <div class="pct">↳ 5%</div>
-          <h3>Leveraged BTC DCA</h3>
-          <p>Gradual, low-exposure leverage with wide margin buffers — never increased to chase back losses. Reduced or suspended whenever conditions call for it.</p>
-        </div>
+
+      <div class="price-foot">
+        <div><div class="k">Reserve — accumulating</div><div class="v" style="color:var(--positive);">stacking ↑</div></div>
+        <div style="text-align:right;"><div class="k">Every contribution</div><div class="v">→ BTC spot first</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<section id="cycle">
+<section id="strategy" class="reveal">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">01 — How contributions are routed</span>
+      <h2>Bitcoin first. Everything else is optional, and small.</h2>
+      <p>Each contribution goes to BTC spot first. Only after that acquisition may the strategy draw up to 20% financing against eligible BTC collateral — split into three narrow, purpose-built buckets.</p>
+    </div>
+    <div class="alloc-grid">
+      <div class="alloc-card core">
+        <div class="alloc-pct">100%</div>
+        <h3>Core BTC accumulation</h3>
+        <p>Every contribution is directed to spot Bitcoin first — the foundation of the reserve, not a rotation or a bet.</p>
+      </div>
+      <div class="alloc-card">
+        <div class="alloc-pct">↳ 5%</div>
+        <h3>Participant liquidity</h3>
+        <p>A small portion of financing made available for participant expenses, per plan rules.</p>
+      </div>
+      <div class="alloc-card">
+        <div class="alloc-pct">↳ 10%</div>
+        <h3>Strategic altcoins</h3>
+        <p>Secondary positions in assets that meet predefined criteria. BTC stays primary.</p>
+      </div>
+    </div>
+    <div class="leverage-row">
+      <div class="leverage-card">
+        <div class="alloc-pct">↳ 5%</div>
+        <p>Leveraged BTC DCA — gradual, low-exposure leverage with wide margin buffers, never increased to chase back losses, reduced or suspended whenever conditions call for it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cycle" class="reveal">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">02 — Market-cycle framework</span>
@@ -108,77 +269,75 @@
     </div>
     <div class="cycle-wrap">
       <div class="cycle-list" id="cycleList">
-        <div class="cycle-item active" data-i="0">
-          <span class="tag">01 / Accumulation</span>
-          <h4>Accumulation</h4>
-          <p>Continue DCA, build the reserve.</p>
-        </div>
-        <div class="cycle-item" data-i="1">
-          <span class="tag">02 / Expansion</span>
-          <h4>Expansion</h4>
-          <p>Keep accumulating, watch risk build.</p>
-        </div>
-        <div class="cycle-item" data-i="2">
-          <span class="tag">03 / Euphoria</span>
-          <h4>Euphoria</h4>
-          <p>Begin strategic selling on predefined signals.</p>
-        </div>
-        <div class="cycle-item" data-i="3">
-          <span class="tag">04 / Distribution</span>
-          <h4>Distribution</h4>
-          <p>Reduce exposure, build liquidity.</p>
-        </div>
-        <div class="cycle-item" data-i="4">
-          <span class="tag">05 / Reaccumulation</span>
-          <h4>Reaccumulation</h4>
-          <p>Redeploy reserved capital into corrections.</p>
-        </div>
+        <div class="cycle-item active" data-i="0"><span class="tag">01 / Accumulation</span><h4>Accumulation</h4><p>Continue DCA, build the reserve.</p></div>
+        <div class="cycle-item" data-i="1"><span class="tag">02 / Expansion</span><h4>Expansion</h4><p>Keep accumulating, watch risk build.</p></div>
+        <div class="cycle-item" data-i="2"><span class="tag">03 / Euphoria</span><h4>Euphoria</h4><p>Begin strategic selling on predefined signals.</p></div>
+        <div class="cycle-item" data-i="3"><span class="tag">04 / Distribution</span><h4>Distribution</h4><p>Reduce exposure, build liquidity.</p></div>
+        <div class="cycle-item" data-i="4"><span class="tag">05 / Reaccumulation</span><h4>Reaccumulation</h4><p>Redeploy reserved capital into corrections.</p></div>
       </div>
       <svg viewBox="0 0 340 340" id="cycleWheel" style="width:100%; max-width:380px; justify-self:center;">
-        <circle cx="170" cy="170" r="140" fill="none" stroke="#262c35" stroke-width="1"/>
+        <circle cx="170" cy="170" r="140" fill="none" stroke="#26262a" stroke-width="1"/>
         <g id="wheelSegs"></g>
-        <circle cx="170" cy="170" r="86" fill="#12161c" stroke="#262c35"/>
-        <text x="170" y="164" text-anchor="middle" fill="#8b92a0" font-family="IBM Plex Mono" font-size="11">CURRENT PHASE</text>
+        <circle cx="170" cy="170" r="86" fill="#141416" stroke="#26262a"/>
+        <text x="170" y="164" text-anchor="middle" fill="#8f8b84" font-family="IBM Plex Mono" font-size="11">CURRENT PHASE</text>
         <text id="phaseLabel" x="170" y="188" text-anchor="middle" fill="#f7931a" font-family="Space Grotesk" font-weight="600" font-size="20">Accumulation</text>
       </svg>
     </div>
   </div>
 </section>
 
-<section>
+<section class="reveal">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">03 — Selling &amp; buybacks</span>
+      <span class="eyebrow">03 — Selling & buybacks</span>
       <h2>An accumulation strategy that still takes profit.</h2>
       <p>Up to 40% of applicable holdings may be sold during extreme strength — never as a requirement, only as a ceiling.</p>
     </div>
-    <div class="grid-3">
-      <div class="card">
-        <div class="num">≤ 40%</div>
-        <h3>Strategic selling</h3>
-        <p>Locks in gains, reduces exposure, and builds liquidity during extreme bull conditions. A maximum, not a target.</p>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="num">≤ 40%</div><h3>Strategic selling</h3><p>Locks in gains, reduces exposure, and builds liquidity during extreme bull conditions. A maximum, not a target.</p></div>
+      <div class="feat-card"><div class="num">≤ 10%</div><h3>Buyback reserve</h3><p>A slice of each strategic sale is set aside to buy back in at better risk/reward — discretionary, market-dependent.</p></div>
+      <div class="feat-card"><div class="num">1 / quarter</div><h3>Reporting cadence</h3><p>Contributions, PnL, allocation, and borrowing exposure are formally reported every quarter, per participant.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="reveal">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Participant tools</span>
+      <h2>Manage your reserve, on your terms.</h2>
+      <p>Request a withdrawal, arrange a larger OTC deposit, or reach support directly — all from your participant dashboard.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="num">→</div>
+        <h3>Withdrawal requests</h3>
+        <p>Submit a withdrawal for admin review. You're notified once it's processed.</p>
+        <a href="requests.html" class="btn btn-ghost" style="margin-top:14px;">Request withdrawal</a>
       </div>
-      <div class="card">
-        <div class="num">≤ 10%</div>
-        <h3>Buyback reserve</h3>
-        <p>A slice of each strategic sale is set aside to buy back in at better risk/reward — discretionary, market-dependent.</p>
+      <div class="feat-card">
+        <div class="num">→</div>
+        <h3>OTC deposit</h3>
+        <p>Larger or off-standard deposits, arranged directly with your admin.</p>
+        <a href="requests.html" class="btn btn-ghost" style="margin-top:14px;">Request OTC deposit</a>
       </div>
-      <div class="card">
-        <div class="num">1 / quarter</div>
-        <h3>Reporting cadence</h3>
-        <p>Contributions, PnL, allocation, and borrowing exposure are formally reported every quarter, per participant.</p>
+      <div class="feat-card">
+        <div class="num">→</div>
+        <h3>Support</h3>
+        <p>Questions about your reserve or a request? Reach out and track replies.</p>
+        <a href="requests.html" class="btn btn-ghost" style="margin-top:14px;">Contact support</a>
       </div>
     </div>
   </div>
 </section>
 
-<section id="risk">
+<section id="risk" class="reveal">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">04 — Before you join</span>
       <h2>Risk, in plain terms.</h2>
     </div>
-    <div class="risk">
+    <div class="risk-card">
       <h3>This is not a guaranteed-return product.</h3>
       <ul>
         <li>Your capital is at risk, including full loss.</li>
@@ -192,26 +351,77 @@
   </div>
 </section>
 
-<footer class="container">
-  <span>Alpha Strategy — Home of Alphas</span>
-  <span>Accumulate. Protect. Recycle. Repeat.</span>
-</footer>
+<section class="reveal">
+  <div class="container">
+    <div class="cta">
+      <span class="eyebrow">Ready when you are</span>
+      <h2 style="margin-top:14px;">Start accumulating with the community.</h2>
+      <p>Join the reserve, get your participant ID, and track your own BTC accumulation from day one.</p>
+      <a href="signup.html" class="btn btn-primary">Join the reserve →</a>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <footer>
+    <span>Alpha Strategy — Home of Alphas</span>
+    <span>Accumulate. Protect. Recycle. Repeat.</span>
+  </footer>
+</div>
 
 <script>
-  // sat stack bars
-  const heights = [40,55,35,70,50,85,60,95,45,75,65,100];
-  const wrap = document.getElementById('satBlocks');
-  heights.forEach((h,i)=>{
-    const b = document.createElement('div');
-    b.className = 'sat-block';
-    b.style.width = h + '%';
-    b.style.animationDelay = (i*0.05)+'s';
-    wrap.appendChild(b);
-  });
+  // ---- real live BTC price + 24h chart via CoinGecko public API ----
+  async function loadLivePrice(){
+    const priceEl = document.getElementById('priceValue');
+    const deltaEl = document.getElementById('priceDelta');
+    const liveLabel = document.getElementById('liveLabel');
+    try{
+      const [priceRes, chartRes] = await Promise.all([
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true'),
+        fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1')
+      ]);
+      if (!priceRes.ok || !chartRes.ok) throw new Error('fetch failed');
+      const priceData = await priceRes.json();
+      const chartData = await chartRes.json();
 
-  // cycle wheel
+      const price = priceData.bitcoin.usd;
+      const change = priceData.bitcoin.usd_24h_change;
+      priceEl.textContent = '$' + price.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+      deltaEl.textContent = (change>=0?'▲ ':'▼ ') + Math.abs(change).toFixed(2) + '% · 24h';
+      deltaEl.style.color = change>=0 ? 'var(--positive)' : 'var(--negative)';
+
+      const prices = chartData.prices.map(p => p[1]);
+      drawChart(prices);
+      liveLabel.textContent = 'LIVE';
+    } catch(e){
+      liveLabel.textContent = 'DELAYED';
+      if (priceEl.textContent === '—') priceEl.textContent = 'Unavailable';
+      if (deltaEl.textContent === 'Loading…') deltaEl.textContent = 'Price feed unavailable';
+    }
+  }
+
+  function drawChart(prices){
+    const W = 400, H = 170;
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const range = (max-min) || 1;
+    const step = W/(prices.length-1);
+    const coords = prices.map((p,i) => {
+      const x = i*step;
+      const y = H - ((p-min)/range)*H*0.85 - H*0.075;
+      return [x,y];
+    });
+    const lineStr = coords.map(c=>c.join(',')).join(' ');
+    const fillStr = lineStr + ` ${W},${H} 0,${H}`;
+    document.getElementById('chartLine').setAttribute('points', lineStr);
+    document.getElementById('chartFill').setAttribute('points', fillStr);
+  }
+
+  loadLivePrice();
+  setInterval(loadLivePrice, 60000);
+
+  // ---- cycle wheel ----
   const phases = ['Accumulation','Expansion','Euphoria','Distribution','Reaccumulation'];
-  const colors = ['#f7931a','#e8a23c','#d9645f','#8b92a0','#4fae9c'];
+  const colors = ['#f7931a','#e8a23c','#e5484d','#8f8b84','#3ecf8e'];
   const segs = document.getElementById('wheelSegs');
   const cx=170, cy=170, r=140, n=5;
   function arc(i){
@@ -225,7 +435,7 @@
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d', arc(i));
     path.setAttribute('fill', colors[i]);
-    path.setAttribute('opacity', i===0 ? '0.9' : '0.18');
+    path.setAttribute('opacity', i===0 ? '0.9' : '0.16');
     path.setAttribute('data-i', i);
     path.style.cursor = 'pointer';
     segs.appendChild(path);
@@ -234,11 +444,18 @@
   const phaseLabel = document.getElementById('phaseLabel');
   function setPhase(i){
     items.forEach(it=>it.classList.toggle('active', it.dataset.i==i));
-    [...segs.children].forEach(s=>s.setAttribute('opacity', s.dataset.i==i?'0.9':'0.18'));
+    [...segs.children].forEach(s=>s.setAttribute('opacity', s.dataset.i==i?'0.9':'0.16'));
     phaseLabel.textContent = phases[i];
   }
   items.forEach(it=>it.addEventListener('mouseenter', ()=>setPhase(it.dataset.i)));
   [...segs.children].forEach(s=>s.addEventListener('mouseenter', ()=>setPhase(s.dataset.i)));
+
+  // ---- scroll reveal ----
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => io.observe(el));
 </script>
 
 </body>
