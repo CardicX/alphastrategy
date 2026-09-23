@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserve — Alpha Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0a0a0b; --panel:#141416; --panel-raised:#1b1b1d; --line:#26262a;
+    --btc:#f7931a; --btc-dim:#5c3d13; --text:#f2f0eb; --muted:#8f8b84;
+    --positive:#3ecf8e; --negative:#e5484d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--void); color:var(--text); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased; padding-bottom:80px; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  a{ color:inherit; text-decoration:none; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; padding:20px 40px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,10,11,0.9);
+    backdrop-filter:blur(10px); z-index:20;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%; border:1.5px solid var(--btc); color:var(--btc);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:15px;
+  }
+  .brand-name{ font-family:'Space Grotesk'; font-weight:600; font-size:16px; }
+  .top-actions a{ color:var(--muted); font-size:13px; }
+  .top-actions a:hover{ color:var(--text); }
+
+  .wrap{ max-width:1000px; margin:0 auto; padding:56px 40px 0; }
+
+  .head{ text-align:center; margin-bottom:44px; }
+  .eyebrow{ font-size:10.5px; letter-spacing:2px; text-transform:uppercase; color:var(--btc); font-weight:600; }
+  .head h1{ font-family:'Space Grotesk'; font-size:clamp(28px,4vw,42px); margin:14px 0 12px; }
+  .head p{ color:var(--muted); font-size:14.5px; max-width:520px; margin:0 auto; line-height:1.6; }
+
+  .verify-badge{
+    display:inline-flex; align-items:center; gap:8px; margin-top:20px; padding:8px 16px;
+    background:var(--panel); border:1px solid var(--line); border-radius:20px; font-size:12px; color:var(--muted);
+  }
+  .verify-badge .dot{ width:7px; height:7px; border-radius:50%; background:var(--positive); box-shadow:0 0 8px var(--positive); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  .hero-total{
+    background:linear-gradient(160deg, rgba(247,147,26,0.10), var(--panel) 65%);
+    border:1px solid var(--btc-dim); border-radius:20px; padding:48px; text-align:center; margin-bottom:20px;
+  }
+  .hero-total .lbl{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+  .hero-total .val{ font-family:'IBM Plex Mono'; font-size:clamp(40px,7vw,64px); font-weight:500; margin:12px 0; }
+  .hero-total .sub{ font-size:13px; color:var(--muted); }
+
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px; }
+  .asset-card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px; }
+  .asset-top{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .asset-icon{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; font-family:'Space Grotesk'; }
+  .asset-icon.btc{ background:var(--btc); color:#181104; }
+  .asset-icon.eth{ background:#627eea; color:#fff; }
+  .asset-icon.usdt{ background:#26a17b; color:#fff; }
+  .asset-name{ font-family:'Space Grotesk'; font-weight:600; font-size:14px; }
+  .asset-val{ font-family:'IBM Plex Mono'; font-size:24px; margin-bottom:4px; }
+  .asset-usd{ font-size:12.5px; color:var(--muted); }
+
+  .status-row{ display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 26px; font-size:12.5px; color:var(--muted); }
+  .status-row .v{ color:var(--text); font-family:'IBM Plex Mono'; }
+  .err{ display:none; text-align:center; padding:40px 0; color:var(--negative); font-size:13.5px; }
+
+  footer{ text-align:center; color:#54524c; font-size:11px; margin-top:40px; letter-spacing:0.5px; }
+
+  @media (max-width:800px){ .grid3{ grid-template-columns:1fr; } header{ padding:18px 24px; } .wrap{ padding:44px 24px 0; } }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="brand">
+    <div class="brand-mark">₿</div>
+    <div class="brand-name">Alpha Strategy</div>
+  </a>
+  <div class="top-actions"><a href="index.html">← Home</a></div>
+</header>
+
+<div class="wrap">
+  <div class="head">
+    <span class="eyebrow">Reserve Transparency</span>
+    <h1>The reserve, live.</h1>
+    <p>Pulled directly from our Binance spot wallet through a read-only API key — no trading or withdrawal access. What you see here is what's actually held.</p>
+    <div class="verify-badge"><span class="dot"></span><span id="statusText">Verifying…</span></div>
+  </div>
+
+  <div class="hero-total">
+    <div class="lbl">Total Reserve Value</div>
+    <div class="val mono" id="totalVal">—</div>
+    <div class="sub" id="totalSub">Loading…</div>
+  </div>
+
+  <div class="grid3">
+    <div class="asset-card">
+      <div class="asset-top"><div class="asset-icon btc">₿</div><div class="asset-name">Bitcoin</div></div>
+      <div class="asset-val mono" id="btcVal">0.00000</div>
+      <div class="asset-usd" id="btcUsd">$0.00</div>
+    </div>
+    <div class="asset-card">
+      <div class="asset-top"><div class="asset-icon eth">Ξ</div><div class="asset-name">Ethereum</div></div>
+      <div class="asset-val mono" id="ethVal">0.0000</div>
+      <div class="asset-usd" id="ethUsd">$0.00</div>
+    </div>
+    <div class="asset-card">
+      <div class="asset-top"><div class="asset-icon usdt">$</div><div class="asset-name">USDT</div></div>
+      <div class="asset-val mono" id="usdtVal">0.00</div>
+      <div class="asset-usd" id="usdtUsd">$0.00</div>
+    </div>
+  </div>
+
+  <div class="status-row">
+    <span>Source: Binance spot wallet (read-only)</span>
+    <span class="v" id="lastUpdated">—</span>
+  </div>
+
+  <div class="err" id="errBox">Couldn't load live reserve data right now. Retrying shortly…</div>
+
+  <footer>ALPHA STRATEGY · HOME OF ALPHAS · RESERVE VERIFIED LIVE</footer>
+</div>
+
+<script>
+  const fmtUsd = (n) => '$' + Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  function animateNumber(el, from, to, decimals, duration=900, prefix=''){
+    const start = performance.now();
+    function tick(now){
+      const t = Math.min(1, (now-start)/duration);
+      const eased = 1 - Math.pow(1-t, 3);
+      const val = from + (to-from)*eased;
+      el.textContent = prefix + val.toLocaleString(undefined,{minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  let prev = { btc:0, eth:0, usdt:0, total:0 };
+
+  async function loadReserve(){
+    const statusText = document.getElementById('statusText');
+    const errBox = document.getElementById('errBox');
+    try{
+      const res = await fetch('/api/binance-balance');
+      if (!res.ok) throw new Error('bad response');
+      const d = await res.json();
+
+      errBox.style.display = 'none';
+      statusText.textContent = 'Verified live';
+
+      animateNumber(document.getElementById('totalVal'), prev.total, d.totalUsd, 2, 900, '$');
+      document.getElementById('totalSub').textContent = 'BTC $' + d.btcPrice.toLocaleString(undefined,{maximumFractionDigits:0}) + ' · ETH $' + d.ethPrice.toLocaleString(undefined,{maximumFractionDigits:0});
+
+      animateNumber(document.getElementById('btcVal'), prev.btc, d.btc, 5);
+      document.getElementById('btcUsd').textContent = fmtUsd(d.btc * d.btcPrice);
+
+      animateNumber(document.getElementById('ethVal'), prev.eth, d.eth, 4);
+      document.getElementById('ethUsd').textContent = fmtUsd(d.eth * d.ethPrice);
+
+      animateNumber(document.getElementById('usdtVal'), prev.usdt, d.usdt, 2);
+      document.getElementById('usdtUsd').textContent = fmtUsd(d.usdt);
+
+      document.getElementById('lastUpdated').textContent = 'Updated ' + new Date(d.updatedAt).toLocaleTimeString();
+
+      prev = { btc:d.btc, eth:d.eth, usdt:d.usdt, total:d.totalUsd };
+    } catch(e){
+      statusText.textContent = 'Reconnecting…';
+      errBox.style.display = 'block';
+    }
+  }
+
+  loadReserve();
+  setInterval(loadReserve, 20000);
+</script>
+
+</body>
+</html>
