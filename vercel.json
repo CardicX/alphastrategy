@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/binance-balance.js": {
+      "regions": ["fra1"]
+    }
+  }
+}
