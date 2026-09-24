@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requests — Alpha Strategy Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+  :root{
+    --void:#0a0a0b; --panel:#141416; --panel-raised:#1b1b1d; --line:#26262a;
+    --btc:#f7931a; --btc-dim:#5c3d13; --text:#f2f0eb; --muted:#8f8b84; --positive:#3ecf8e; --negative:#e5484d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--void); color:var(--text); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased; padding-bottom:80px; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; padding:22px 40px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,10,11,0.92);
+    backdrop-filter:blur(8px); z-index:10;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%; border:1.5px solid var(--btc); color:var(--btc);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:15px;
+  }
+  .brand-name{ font-family:'Space Grotesk'; font-weight:600; font-size:16px; }
+  .admin-badge{
+    font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--btc);
+    border:1px solid var(--btc-dim); padding:3px 9px; border-radius:20px; margin-left:6px;
+  }
+  .top-actions{ display:flex; gap:18px; align-items:center; }
+  .top-actions a{ color:var(--muted); font-size:12.5px; text-decoration:none; }
+  .top-actions a:hover{ color:var(--text); }
+  .logout{ color:var(--muted); font-size:12.5px; cursor:pointer; }
+  .logout:hover{ color:var(--text); }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:36px 40px 0; }
+
+  .login-screen{ min-height:80vh; display:flex; align-items:center; justify-content:center; }
+  .login-card{ max-width:360px; width:100%; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:32px; }
+  .eyebrow{ font-size:10.5px; letter-spacing:2px; text-transform:uppercase; color:var(--btc); font-weight:600; }
+  .login-card h1{ font-family:'Space Grotesk'; font-size:24px; margin:14px 0 6px; }
+  .login-card p{ color:var(--muted); font-size:13px; margin-bottom:22px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .field input{
+    width:100%; background:var(--panel-raised); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-family:'IBM Plex Mono'; font-size:13px; outline:none;
+  }
+  .field input:focus{ border-color:var(--btc); }
+  .login-err{ color:var(--negative); font-size:12.5px; margin-top:10px; display:none; }
+
+  .btn{
+    font-family:'Inter'; font-weight:600; font-size:12px; padding:8px 14px; border-radius:8px;
+    cursor:pointer; border:none; transition:.15s ease; appearance:none; -webkit-appearance:none;
+  }
+  .btn-primary{ background:var(--btc); color:#181104; }
+  .btn-primary:hover{ background:#ffa733; }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--text); }
+  .btn-ghost:hover{ border-color:#444; }
+  .btn-negative{ background:transparent; border:1px solid #4d2426; color:var(--negative); }
+  .btn-negative:hover{ background:#2a1414; }
+  .btn-block{ width:100%; padding:11px; }
+
+  h2.section{ font-family:'Space Grotesk'; font-size:16px; font-weight:600; margin-bottom:4px; }
+  .section-sub{ color:var(--muted); font-size:12.5px; margin-bottom:16px; }
+
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:24px; }
+
+  .req-row{ padding:16px 0; border-bottom:1px solid #1e1e20; }
+  .req-row:last-child{ border-bottom:none; }
+  .req-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+  .req-id{ font-family:'Space Grotesk'; font-size:14.5px; font-weight:600; }
+  .req-meta{ color:var(--muted); font-size:11.5px; margin-top:2px; }
+  .req-amount{ font-family:'IBM Plex Mono'; font-size:14px; white-space:nowrap; }
+  .req-detail{ margin-top:10px; font-size:12.5px; color:#cfcbc2; background:var(--panel-raised); border-radius:8px; padding:10px 12px; }
+  .req-detail .k{ color:var(--muted); }
+  .req-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .status-tag{
+    font-size:10.5px; padding:4px 10px; border-radius:20px; border:1px solid var(--line);
+    color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .status-tag.pending{ border-color:var(--btc-dim); color:var(--btc); }
+  .status-tag.completed, .status-tag.approved{ border-color:#1e3d2c; color:var(--positive); }
+  .status-tag.rejected, .status-tag.cancelled{ border-color:#4d2426; color:var(--negative); }
+
+  .reply-box{ margin-top:10px; }
+  .reply-box textarea{
+    width:100%; min-height:70px; background:var(--panel-raised); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-family:'Inter'; font-size:13px; outline:none; resize:vertical;
+  }
+  .reply-box textarea:focus{ border-color:var(--btc); }
+
+  .empty-note{ color:var(--muted); font-size:12.5px; padding:8px 0; }
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--panel); border:1px solid var(--btc);
+    padding:13px 20px; border-radius:10px; font-size:13px; display:none; z-index:200;
+  }
+  footer{ text-align:center; color:#54524c; font-size:11px; margin-top:10px; letter-spacing:0.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="admin.html" class="brand">
+    <div class="brand-mark">₿</div>
+    <div>
+      <div class="brand-name">Alpha Strategy <span class="admin-badge">Requests</span></div>
+    </div>
+  </a>
+  <div class="top-actions">
+    <a href="admin.html">← Main admin</a>
+    <div class="logout" id="logoutLink" style="display:none;" onclick="logout()">Log out</div>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<div id="loginView" class="login-screen">
+  <div class="login-card">
+    <div class="eyebrow">Admin access</div>
+    <h1>Log in</h1>
+    <p>Same admin account as the main admin panel.</p>
+    <div class="field"><label>Email</label><input type="email" id="loginEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="loginPass"></div>
+    <button class="btn btn-primary btn-block" onclick="login()">Log in →</button>
+    <p class="login-err" id="loginError"></p>
+  </div>
+</div>
+
+<div class="wrap" id="panelView" style="display:none;">
+
+  <!-- WITHDRAWALS -->
+  <h2 class="section">Withdrawal Requests</h2>
+  <div class="section-sub">Review and process participant withdrawal requests.</div>
+  <div class="card"><div id="withdrawList"><p class="empty-note">Loading…</p></div></div>
+
+  <!-- OTC -->
+  <h2 class="section">OTC Deposit Requests</h2>
+  <div class="section-sub">Larger or off-standard deposits — reach out and mark the outcome.</div>
+  <div class="card"><div id="otcList"><p class="empty-note">Loading…</p></div></div>
+
+  <!-- SUPPORT -->
+  <h2 class="section">Support Tickets</h2>
+  <div class="section-sub">Messages from participants.</div>
+  <div class="card"><div id="ticketList"><p class="empty-note">Loading…</p></div></div>
+
+  <footer>ALPHA STRATEGY · HOME OF ALPHAS · ADMIN CONSOLE</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2500);
+  }
+  const fmt = (n) => '$' + Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  async function checkSession(){
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('panelView').style.display = 'block';
+      document.getElementById('logoutLink').style.display = 'inline';
+      loadAll();
+    }
+  }
+  async function login(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPass').value;
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    const err = document.getElementById('loginError');
+    if (error) { err.textContent = error.message; err.style.display = 'block'; return; }
+    err.style.display = 'none';
+    checkSession();
+  }
+  async function logout(){ await supabaseClient.auth.signOut(); location.reload(); }
+
+  function loadAll(){ loadWithdrawals(); loadOtc(); loadTickets(); }
+
+  // ---- withdrawals ----
+  async function loadWithdrawals(){
+    const el = document.getElementById('withdrawList');
+    const { data, error } = await supabaseClient.from('withdrawal_requests').select('*').order('created_at', { ascending:false });
+    if (error) { el.innerHTML = `<p class="empty-note">${error.message}</p>`; return; }
+    if (!data || !data.length) { el.innerHTML = '<p class="empty-note">No withdrawal requests yet.</p>'; return; }
+    el.innerHTML = data.map(r => `
+      <div class="req-row">
+        <div class="req-top">
+          <div>
+            <div class="req-id">${r.participant_id} <span class="status-tag ${r.status}">${r.status}</span></div>
+            <div class="req-meta">${new Date(r.created_at).toLocaleString()}</div>
+          </div>
+          <div class="req-amount">${r.amount} ${r.currency}</div>
+        </div>
+        <div class="req-detail">
+          <span class="k">Destination:</span> <span class="mono">${r.destination}</span>
+          ${r.note ? `<br><span class="k">Note:</span> ${r.note}` : ''}
+        </div>
+        ${r.status === 'pending' ? `
+          <div class="req-actions">
+            <button class="btn btn-primary" onclick="updateWithdrawal(${r.id}, 'approved')">Approve</button>
+            <button class="btn btn-negative" onclick="updateWithdrawal(${r.id}, 'rejected')">Reject</button>
+          </div>` : ''}
+        ${r.status === 'approved' ? `
+          <div class="req-actions">
+            <button class="btn btn-primary" onclick="updateWithdrawal(${r.id}, 'completed')">Mark completed</button>
+          </div>` : ''}
+      </div>
+    `).join('');
+  }
+  async function updateWithdrawal(id, status){
+    const { error } = await supabaseClient.from('withdrawal_requests')
+      .update({ status, processed_at: new Date().toISOString() }).eq('id', id);
+    showToast(error ? 'Error: ' + error.message : `Withdrawal #${id} marked ${status}`);
+    loadWithdrawals();
+  }
+
+  // ---- otc ----
+  async function loadOtc(){
+    const el = document.getElementById('otcList');
+    const { data, error } = await supabaseClient.from('otc_requests').select('*').order('created_at', { ascending:false });
+    if (error) { el.innerHTML = `<p class="empty-note">${error.message}</p>`; return; }
+    if (!data || !data.length) { el.innerHTML = '<p class="empty-note">No OTC requests yet.</p>'; return; }
+    el.innerHTML = data.map(r => `
+      <div class="req-row">
+        <div class="req-top">
+          <div>
+            <div class="req-id">${r.participant_id} <span class="status-tag ${r.status}">${r.status}</span></div>
+            <div class="req-meta">${new Date(r.created_at).toLocaleString()}</div>
+          </div>
+          <div class="req-amount">${r.amount} ${r.currency}</div>
+        </div>
+        <div class="req-detail">
+          <span class="k">Contact:</span> ${r.contact}
+          ${r.note ? `<br><span class="k">Note:</span> ${r.note}` : ''}
+        </div>
+        ${r.status === 'pending' ? `
+          <div class="req-actions">
+            <button class="btn btn-primary" onclick="updateOtc(${r.id}, 'contacted')">Mark contacted</button>
+            <button class="btn btn-negative" onclick="updateOtc(${r.id}, 'cancelled')">Cancel</button>
+          </div>` : ''}
+        ${r.status === 'contacted' ? `
+          <div class="req-actions">
+            <button class="btn btn-primary" onclick="updateOtc(${r.id}, 'completed')">Mark completed</button>
+          </div>` : ''}
+      </div>
+    `).join('');
+  }
+  async function updateOtc(id, status){
+    const { error } = await supabaseClient.from('otc_requests').update({ status }).eq('id', id);
+    showToast(error ? 'Error: ' + error.message : `OTC request #${id} marked ${status}`);
+    loadOtc();
+  }
+
+  // ---- tickets ----
+  async function loadTickets(){
+    const el = document.getElementById('ticketList');
+    const { data, error } = await supabaseClient.from('support_tickets').select('*').order('created_at', { ascending:false });
+    if (error) { el.innerHTML = `<p class="empty-note">${error.message}</p>`; return; }
+    if (!data || !data.length) { el.innerHTML = '<p class="empty-note">No support tickets yet.</p>'; return; }
+    el.innerHTML = data.map(r => `
+      <div class="req-row">
+        <div class="req-top">
+          <div>
+            <div class="req-id">${r.subject} <span class="status-tag ${r.status}">${r.status}</span></div>
+            <div class="req-meta">${r.name} · ${r.email}${r.participant_id ? ' · ' + r.participant_id : ''} · ${new Date(r.created_at).toLocaleString()}</div>
+          </div>
+        </div>
+        <div class="req-detail">${r.message}</div>
+        ${r.admin_reply ? `<div class="req-detail" style="margin-top:8px; border-left:2px solid var(--btc);"><span class="k">Your reply:</span> ${r.admin_reply}</div>` : ''}
+        ${r.status !== 'closed' ? `
+          <div class="reply-box">
+            <textarea id="reply-${r.id}" placeholder="Write a reply…">${r.admin_reply || ''}</textarea>
+          </div>
+          <div class="req-actions">
+            <button class="btn btn-primary" onclick="replyTicket(${r.id})">Send reply</button>
+            <button class="btn btn-ghost" onclick="closeTicket(${r.id})">Close ticket</button>
+          </div>` : ''}
+      </div>
+    `).join('');
+  }
+  async function replyTicket(id){
+    const reply = document.getElementById('reply-' + id).value.trim();
+    if (!reply) { showToast('Write a reply first'); return; }
+    const { error } = await supabaseClient.from('support_tickets')
+      .update({ admin_reply: reply, status: 'replied', updated_at: new Date().toISOString() }).eq('id', id);
+    showToast(error ? 'Error: ' + error.message : 'Reply saved');
+    loadTickets();
+  }
+  async function closeTicket(id){
+    const { error } = await supabaseClient.from('support_tickets')
+      .update({ status: 'closed', updated_at: new Date().toISOString() }).eq('id', id);
+    showToast(error ? 'Error: ' + error.message : 'Ticket closed');
+    loadTickets();
+  }
+
+  checkSession();
+</script>
+
+</body>
+</html>

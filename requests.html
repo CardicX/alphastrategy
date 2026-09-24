@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requests & Support — Alpha Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+  :root{
+    --void:#0a0a0b; --panel:#141416; --panel-raised:#1b1b1d; --line:#26262a;
+    --btc:#f7931a; --btc-dim:#5c3d13; --text:#f2f0eb; --muted:#8f8b84; --positive:#3ecf8e; --negative:#e5484d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--void); color:var(--text); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased; padding-bottom:80px; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; padding:22px 40px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,10,11,0.92);
+    backdrop-filter:blur(8px); z-index:10;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); }
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%; border:1.5px solid var(--btc); color:var(--btc);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk'; font-weight:700; font-size:15px;
+  }
+  .brand-name{ font-family:'Space Grotesk'; font-weight:600; font-size:16px; }
+  .brand-sub{ font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:1px; }
+  .top-actions a{ color:var(--muted); font-size:12.5px; text-decoration:none; }
+  .top-actions a:hover{ color:var(--text); }
+
+  .wrap{ max-width:760px; margin:0 auto; padding:36px 40px 0; }
+
+  .lookup-screen{ min-height:60vh; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .lookup-card{ max-width:380px; width:100%; }
+  .eyebrow{ font-size:10.5px; letter-spacing:2px; text-transform:uppercase; color:var(--btc); font-weight:600; }
+  .lookup-card h1{ font-family:'Space Grotesk'; font-size:26px; margin:14px 0 8px; }
+  .lookup-card p{ color:var(--muted); font-size:13px; margin-bottom:26px; }
+  .lookup-row{ display:flex; gap:10px; }
+  .lookup-row input{
+    flex:1; background:var(--panel-raised); border:1px solid var(--line); color:var(--text);
+    padding:12px 14px; border-radius:8px; font-family:'IBM Plex Mono'; font-size:14px; outline:none;
+  }
+  .lookup-row input:focus{ border-color:var(--btc); }
+  .lookup-msg{ margin-top:14px; font-size:12.5px; }
+  .lookup-msg.err{ color:var(--negative); }
+  .lookup-msg.muted{ color:var(--muted); }
+
+  .btn{
+    font-family:'Inter'; font-weight:600; font-size:12.5px; padding:10px 18px; border-radius:8px;
+    cursor:pointer; border:none; transition:.15s ease; appearance:none; -webkit-appearance:none;
+  }
+  .btn-primary{ background:var(--btc); color:#181104; }
+  .btn-primary:hover{ background:#ffa733; }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--text); }
+  .btn-ghost:hover{ border-color:#444; }
+  .btn-block{ width:100%; }
+
+  .id-banner{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+  .id-banner h1{ font-family:'Space Grotesk'; font-size:22px; }
+  .id-banner .meta{ color:var(--muted); font-size:12.5px; margin-top:4px; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:22px; }
+  .tab{
+    padding:10px 18px; font-family:'Inter'; font-weight:600; font-size:12.5px; border-radius:8px;
+    border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer;
+    appearance:none; -webkit-appearance:none;
+  }
+  .tab.active{ border-color:var(--btc); color:var(--btc); }
+
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px; margin-bottom:20px; }
+  .card h2{ font-family:'Space Grotesk'; font-size:16px; margin-bottom:6px; }
+  .card .sub{ color:var(--muted); font-size:12.5px; margin-bottom:18px; }
+
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block; font-size:10.5px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:7px;
+  }
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel-raised); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-family:'IBM Plex Mono'; font-size:13px; outline:none;
+  }
+  .field textarea{ font-family:'Inter'; resize:vertical; min-height:80px; }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--btc); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  .warn{
+    background:#1f1710; border:1px solid #5c3d13; border-radius:8px; padding:12px 14px;
+    font-size:12px; color:#e0b060; margin-bottom:18px; line-height:1.5;
+  }
+
+  .success{ display:none; text-align:center; padding:20px 0; }
+  .success .check{ font-size:32px; color:var(--positive); margin-bottom:10px; }
+  .success h3{ font-family:'Space Grotesk'; font-size:16px; margin-bottom:6px; }
+  .success p{ color:var(--muted); font-size:13px; }
+
+  .ticket-row{ padding:14px 0; border-bottom:1px solid #1e1e20; }
+  .ticket-row:last-child{ border-bottom:none; }
+  .ticket-top{ display:flex; justify-content:space-between; align-items:center; }
+  .ticket-subject{ font-family:'Space Grotesk'; font-size:13.5px; font-weight:600; }
+  .ticket-meta{ color:var(--muted); font-size:11px; margin-top:2px; }
+  .ticket-msg{ font-size:12.5px; color:#cfcbc2; margin-top:8px; }
+  .ticket-reply{
+    margin-top:8px; font-size:12.5px; background:var(--panel-raised); border-left:2px solid var(--btc);
+    border-radius:6px; padding:10px 12px;
+  }
+  .ticket-reply .k{ color:var(--btc); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:4px; }
+  .status-tag{
+    font-size:10px; padding:3px 9px; border-radius:20px; border:1px solid var(--line);
+    color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .status-tag.open{ border-color:var(--btc-dim); color:var(--btc); }
+  .status-tag.replied{ border-color:#1e3d2c; color:var(--positive); }
+  .status-tag.closed{ border-color:var(--line); color:var(--muted); }
+  .empty-note{ color:var(--muted); font-size:12.5px; }
+
+  footer{ text-align:center; color:#54524c; font-size:11px; margin-top:40px; letter-spacing:0.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="brand">
+    <div class="brand-mark">₿</div>
+    <div>
+      <div class="brand-name">Alpha Strategy</div>
+      <div class="brand-sub">Home of Alphas</div>
+    </div>
+  </a>
+  <div class="top-actions"><a href="dashboard.html">← Back to dashboard</a></div>
+</header>
+
+<div class="wrap">
+
+  <!-- LOOKUP -->
+  <div id="lookupView" class="lookup-screen">
+    <div class="lookup-card">
+      <div class="eyebrow">Requests & Support</div>
+      <h1>Enter your participant ID</h1>
+      <p>Same ID you use on your dashboard.</p>
+      <div class="lookup-row">
+        <input type="text" id="idInput" placeholder="AS-1001" class="mono">
+        <button class="btn btn-primary" onclick="lookup()">Continue →</button>
+      </div>
+      <p class="lookup-msg err" id="lookupError" style="display:none;">No participant found with that ID. Check with the community admin.</p>
+      <p class="lookup-msg muted" id="lookupLoading" style="display:none;">Looking up…</p>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="mainView" style="display:none;">
+    <div class="id-banner">
+      <div>
+        <h1 id="pName">—</h1>
+        <div class="meta">Participant <span class="mono" id="pId"></span></div>
+      </div>
+      <button class="btn btn-ghost" onclick="resetView()">Switch ID</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="withdraw" onclick="showTab('withdraw')">Withdrawal</button>
+      <button class="tab" data-tab="otc" onclick="showTab('otc')">OTC Deposit</button>
+      <button class="tab" data-tab="support" onclick="showTab('support')">Support</button>
+    </div>
+
+    <!-- WITHDRAWAL -->
+    <div class="card tab-panel" id="panel-withdraw">
+      <h2>Request a withdrawal</h2>
+      <div class="sub">Submitted to your admin for review — not automatic. You'll be contacted once it's processed.</div>
+      <div class="warn">Double-check your destination address. Withdrawals sent to a wrong or unsupported-network address can't be recovered.</div>
+      <div class="row2">
+        <div class="field"><label>Currency</label>
+          <select id="wCurrency"><option>BTC</option><option>USDT</option><option>ETH</option></select>
+        </div>
+        <div class="field"><label>Amount</label><input type="number" id="wAmount" step="0.00001" placeholder="0.00"></div>
+      </div>
+      <div class="field"><label>Destination address</label><input type="text" id="wDestination" placeholder="Wallet address to receive funds"></div>
+      <div class="field"><label>Note (optional)</label><textarea id="wNote" placeholder="Anything your admin should know"></textarea></div>
+      <button class="btn btn-primary btn-block" onclick="submitWithdrawal()">Submit request →</button>
+      <div class="success" id="wSuccess"><div class="check">✓</div><h3>Request submitted</h3><p>Your admin will review it and reach out once it's processed.</p></div>
+    </div>
+
+    <!-- OTC -->
+    <div class="card tab-panel" id="panel-otc" style="display:none;">
+      <h2>Request an OTC deposit</h2>
+      <div class="sub">For larger or off-standard deposits — your admin will contact you directly to arrange it.</div>
+      <div class="row2">
+        <div class="field"><label>Currency</label>
+          <select id="oCurrency"><option>USDT</option><option>BTC</option><option>ETH</option></select>
+        </div>
+        <div class="field"><label>Amount</label><input type="number" id="oAmount" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="field"><label>Best way to reach you</label><input type="text" id="oContact" placeholder="Telegram handle or email"></div>
+      <div class="field"><label>Note (optional)</label><textarea id="oNote" placeholder="Preferred timing, method, etc."></textarea></div>
+      <button class="btn btn-primary btn-block" onclick="submitOtc()">Submit request →</button>
+      <div class="success" id="oSuccess"><div class="check">✓</div><h3>Request submitted</h3><p>Your admin will reach out to arrange the deposit.</p></div>
+    </div>
+
+    <!-- SUPPORT -->
+    <div class="card tab-panel" id="panel-support" style="display:none;">
+      <h2>Contact support</h2>
+      <div class="sub">Questions about your reserve, a request, or anything else.</div>
+      <div class="row2">
+        <div class="field"><label>Name</label><input type="text" id="sName"></div>
+        <div class="field"><label>Email</label><input type="email" id="sEmail"></div>
+      </div>
+      <div class="field"><label>Subject</label><input type="text" id="sSubject" placeholder="What's this about?"></div>
+      <div class="field"><label>Message</label><textarea id="sMessage" style="min-height:120px;"></textarea></div>
+      <button class="btn btn-primary btn-block" onclick="submitTicket()">Send message →</button>
+      <div class="success" id="sSuccess"><div class="check">✓</div><h3>Message sent</h3><p>Your admin will reply as soon as they can.</p></div>
+    </div>
+
+    <!-- MY TICKETS -->
+    <div class="card" id="myTicketsCard" style="display:none;">
+      <h2>My messages</h2>
+      <div class="sub">Status and replies for what you've sent in.</div>
+      <div id="myTicketsList"><p class="empty-note">Loading…</p></div>
+    </div>
+  </div>
+
+  <footer>ALPHA STRATEGY · HOME OF ALPHAS</footer>
+</div>
+
+<script>
+  let currentId = null, currentName = null;
+
+  document.getElementById('idInput').addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+
+  async function lookup(){
+    const id = document.getElementById('idInput').value.trim().toUpperCase();
+    const errEl = document.getElementById('lookupError');
+    const loadEl = document.getElementById('lookupLoading');
+    errEl.style.display = 'none';
+    if (!id) return;
+    loadEl.style.display = 'block';
+
+    const { data: participant, error } = await supabaseClient
+      .from('participants').select('*').eq('id', id).maybeSingle();
+
+    loadEl.style.display = 'none';
+    if (error || !participant) { errEl.style.display = 'block'; return; }
+
+    currentId = id;
+    currentName = participant.name;
+    document.getElementById('pName').textContent = participant.name;
+    document.getElementById('pId').textContent = id;
+    document.getElementById('sName').value = participant.name;
+    document.getElementById('sEmail').value = participant.email || '';
+
+    document.getElementById('lookupView').style.display = 'none';
+    document.getElementById('mainView').style.display = 'block';
+
+    loadMyTickets();
+  }
+
+  function resetView(){
+    currentId = null;
+    document.getElementById('mainView').style.display = 'none';
+    document.getElementById('lookupView').style.display = 'flex';
+    document.getElementById('idInput').value = '';
+  }
+
+  function showTab(name){
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('panel-' + name).style.display = 'block';
+    document.getElementById('myTicketsCard').style.display = (name === 'support') ? 'block' : 'none';
+  }
+
+  async function loadMyTickets(){
+    const el = document.getElementById('myTicketsList');
+    el.innerHTML = '<p class="empty-note">Loading…</p>';
+    const { data, error } = await supabaseClient
+      .from('support_tickets').select('*').eq('participant_id', currentId)
+      .order('created_at', { ascending: false });
+    if (error) { el.innerHTML = `<p class="empty-note">${error.message}</p>`; return; }
+    if (!data || !data.length) { el.innerHTML = '<p class="empty-note">No messages sent yet.</p>'; return; }
+    el.innerHTML = data.map(t => `
+      <div class="ticket-row">
+        <div class="ticket-top">
+          <div class="ticket-subject">${t.subject}</div>
+          <span class="status-tag ${t.status}">${t.status}</span>
+        </div>
+        <div class="ticket-meta">${new Date(t.created_at).toLocaleString()}</div>
+        <div class="ticket-msg">${t.message}</div>
+        ${t.admin_reply ? `<div class="ticket-reply"><span class="k">Admin reply</span>${t.admin_reply}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  async function submitWithdrawal(){
+    const row = {
+      participant_id: currentId,
+      currency: document.getElementById('wCurrency').value,
+      amount: Number(document.getElementById('wAmount').value),
+      destination: document.getElementById('wDestination').value.trim(),
+      note: document.getElementById('wNote').value.trim() || null
+    };
+    if (!row.amount || !row.destination) { alert('Amount and destination address are required.'); return; }
+    const { error } = await supabaseClient.from('withdrawal_requests').insert(row);
+    if (error) { alert('Something went wrong: ' + error.message); return; }
+    document.querySelectorAll('#panel-withdraw .field, #panel-withdraw .row2, #panel-withdraw .warn, #panel-withdraw > button').forEach(el => el.style.display = 'none');
+    document.getElementById('wSuccess').style.display = 'block';
+  }
+
+  async function submitOtc(){
+    const row = {
+      participant_id: currentId,
+      currency: document.getElementById('oCurrency').value,
+      amount: Number(document.getElementById('oAmount').value),
+      contact: document.getElementById('oContact').value.trim(),
+      note: document.getElementById('oNote').value.trim() || null
+    };
+    if (!row.amount || !row.contact) { alert('Amount and a way to reach you are required.'); return; }
+    const { error } = await supabaseClient.from('otc_requests').insert(row);
+    if (error) { alert('Something went wrong: ' + error.message); return; }
+    document.querySelectorAll('#panel-otc .field, #panel-otc .row2, #panel-otc > button').forEach(el => el.style.display = 'none');
+    document.getElementById('oSuccess').style.display = 'block';
+  }
+
+  async function submitTicket(){
+    const row = {
+      participant_id: currentId,
+      name: document.getElementById('sName').value.trim(),
+      email: document.getElementById('sEmail').value.trim(),
+      subject: document.getElementById('sSubject').value.trim(),
+      message: document.getElementById('sMessage').value.trim()
+    };
+    if (!row.name || !row.email || !row.subject || !row.message) { alert('Please fill in every field.'); return; }
+    const { error } = await supabaseClient.from('support_tickets').insert(row);
+    if (error) { alert('Something went wrong: ' + error.message); return; }
+    document.querySelectorAll('#panel-support .field, #panel-support .row2, #panel-support > button').forEach(el => el.style.display = 'none');
+    document.getElementById('sSuccess').style.display = 'block';
+    loadMyTickets();
+  }
+</script>
+
+</body>
+</html>
